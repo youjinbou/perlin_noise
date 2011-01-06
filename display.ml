@@ -11,7 +11,7 @@ struct
   let  f = Interpolate.cubic
 end 
 
-module N = Noise2(I)
+module N = Noise.Make(I)
 
 type point = (int * int)
 
