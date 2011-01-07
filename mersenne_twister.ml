@@ -34,77 +34,137 @@
    Vol. 8, No. 1, January 1998, pp 3--30.                          *)
 
 (* Period parameters *)
+
+(* convenient shortcuts *)
+let ( land_ ) = Int32.logand 
+let ( lor_ )  = Int32.logor 
+let ( lxor_ ) = Int32.logxor
+let ( *! )    = Int32.mul
+let ( lsl_ )  = Int32.shift_left
+let ( lsr_ )  = Int32.shift_right
+let to_int    = Int32.to_int
+let of_int    = Int32.of_int
+let mod_      = Int32.rem
+
 module Period =
 struct 
   let n = 624
   let m = 397
-  let matrix_a   = 0x9908b0df (* constant vector a *)
-  let upper_mask = 0x80000000 (* most significant w-r bits *)
-  let lower_mask = 0x7fffffff (* least significant r bits *)
+  let matrix_a   = 0x9908b0dfl (* constant vector a *)
+  let upper_mask = 0x80000000l (* most significant w-r bits *)
+  let lower_mask = 0x7fffffffl (* least significant r bits *)
 end
 
 (* tempering parameters *)
 module Tempering =
 struct
-  let mask_b = 0x9d2c5680
-  let mask_c = 0xefc60000
-  let shift_u y = (y >> 11)
-  let shift_s y = (y << 7)
-  let shift_t y = (y << 15)
-  let shift_l y = (y >> 18)
+
+  let mask_b = 0x9d2c5680l
+  let mask_c = 0xefc60000l
+  let shift_u y = (lsr_ y 11)
+  let shift_s y = (lsl_ y 7)
+  let shift_t y = (lsl_ y 15)
+  let shift_l y = (lsr_ y 18)
 end
 
 module State =
 struct
-  type t = {mt : int Array; mutable idx : int}
+  type t = {mt : int32 array; mutable idx : int}
 
-  let create () = {mt = Array.make Period.n 0 (* the array for the state vector  *); idx = 0 }
+  let create () = {
+    mt = Array.make Period.n 0l; (* the array for the state vector  *)
+    idx = 0
+  }
+
+  let mt v = v.mt
+
+  let idx v = v.idx
+
+  let incr_idx v = v.idx <- succ v.idx 
+
+  let reset_idx v = v.idx <- 0
 
   (* initializing the array with a NONZERO seed *)
-  let init v seed =
+  let init v seed : t =
     (* setting initial seeds to mt[N] using         
        the generator Line 25 of Table 1 in          
        [KNUTH 1981, The Art of Computer Programming 
        Vol. 2 (2nd Ed.), pp102]                     *)
-    v.mt.(0) <- seed land 0xffffffff ;
-    for i = 1 to (pred N) do
-      v.mt.(i) <- (69069 * v.mt.(i-1)) land 0xffffffff
+    v.mt.(0) <- land_ seed 0xffffffffl;
+    for i = 1 to pred Period.n do
+      let k = 69069l *! v.mt.(pred i)
+      in
+	v.mt.(i) <- land_ k 0xffffffffl
     done;
     v
       
 end
 
-let default = State.init (State.create ()) 4357
+module type DATA = 
+sig
+  val state : State.t
+end
 
-let rand () = 
-  let mag01 = [| 0x0; Period.matrix_a |]
-    (* mag01[x] = x * MATRIX_A  for x=0,1 *)
-  in
-  let refill s =
-    let newy s v1 v2 = 
-      (s.mt.(v1) land Period.upper_mask) lor (s.mt.(v2) land Period.lower_mask)
-    and storemt s idx1 idx2 y =
-      s.mt.(idx1) <- (s.mt.(idx2) lxor (y lsr 1)) lxor mag01.(y land 0x1)
+module Make (D : DATA) =
+struct
+
+  let rand () = 
+    let mt        = State.mt
+    and idx       = State.idx
+    and reset_idx = State.reset_idx
+    and incr_idx  = State.incr_idx
+    and mag01 = [| 0l ; Period.matrix_a |]
+      (* mag01[x] = x * MATRIX_A  for x=0,1 *)
     in
-      for kk = 0 to Period.n - Period.m - 1 do 
-	let y = newy s kk (kk+1)
-	in
-          storemt s kk (kk+Period.m) y 
-      done;
-      for kk = Period.n - Period.m to Period.n - 2 do
-	let y = newy s kk (kk+1)
-	in
-	  storemt s kk (kk+(Period.m)) y 
-      done;
-      let y = newy s (Period.n - 1) 0
+    let refill s =
+      let newy s v1 v2 = 
+	lor_ (land_ (mt s).(v1) Period.upper_mask) (land_ (mt s).(v2) Period.lower_mask)
+      and storemt s idx1 idx2 y =
+	(mt s).(idx1) <- lxor_ 
+	  (lxor_ (mt s).(idx2) (lsr_ y 1)) mag01.((to_int y) land 0x1)
       in
-	storemt s (Period.n - 1) (Period.m - 1) y 
-  in
-  let s = default in
-    if s.idx >= Period.n 
-    then refill s;
-    let y = s.mt.(s.idx) in
-    let y = (y lxor (Tempering.shift_u y)) in
-    let y = (y lxor ((Tempering.shift_s y) land Tempering.mask_b)) in
-    let y = (y lxor ((Tempering.shift_t y) land Tempering.mask_c)) in
-      y lxor (Tempering.shift_l y)
+	for kk = 0 to pred (Period.n - Period.m) do 
+	  let y = newy s kk (succ kk)
+	  in
+            storemt s kk (kk + Period.m) y
+	done;
+	for kk = Period.n - Period.m to Period.n - 2 do
+	  let y = newy s kk (succ kk)
+	  in
+	    storemt s kk (kk + Period.m - Period.n) y
+	done;
+	let y = newy s (Period.n - 1) 0
+	in
+	  storemt s (Period.n - 1) (Period.m - 1) y;
+	  reset_idx s
+
+    in
+    let s = D.state in
+      if idx s >= Period.n
+      then refill s;
+      let y = (mt s).(idx s) in
+      let y = (lxor_ y (Tempering.shift_u y)) in
+      let y = (lxor_ y (land_ (Tempering.shift_s y) Tempering.mask_b)) in
+      let y = (lxor_ y (land_ (Tempering.shift_t y) Tempering.mask_c)) in
+	incr_idx s ; lxor_ y (Tempering.shift_l y)
+
+
+  let int32 x = mod_ (rand ()) x
+    
+  let int x = 
+    let v1 = to_int (rand ())
+    and v2 = to_int (rand ()) lsl 31
+    in
+      (v1 lor v2) mod x
+
+end
+
+module DefaultData =
+struct 
+  let state = State.init (State.create ()) 4357l
+end
+
+module Default = Make(DefaultData)
+
+let int32 = Default.int32
+let int   = Default.int

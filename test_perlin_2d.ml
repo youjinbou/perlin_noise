@@ -5,13 +5,15 @@ open Sdlloader;;
 open Sdlkey;;
 open Noise;;
 
-module I : (INTERPOLATE with type t = float) = 
+module NConfig : (Noise.CONFIG) = 
 struct 
-  type t = float
-  let  f = Interpolate.cubic
+  let interpolate = Interpolate.cubic
+  let persistence = 1.0
+  let octaves     = 8
+  let psize       = 2048
 end 
 
-module N = Noise.Make(I)
+module N = Noise.Make(NConfig)
 
 type point = (int * int)
 
@@ -20,7 +22,6 @@ type point = (int * int)
    a color is an int triple (actually a quadruple), so we need a way to 
    produce 3 different values out of the Noise.f function
    => a seed parameter is necessary to change the Noise.f behaviour
-   for now, we'll just generate a b&w texture
    the result is a 32bit SDL surface
 *)
 module Texture_gen =
@@ -73,8 +74,8 @@ struct
 	  let color_comp x y = int_of_float (((N.D2.perlin (x,y)) *. 127.0) +. 127.0)
 	  in
 	  let r = color_comp x' y'
-	  and g = color_comp y' x'
-	  and b = color_comp z' w'
+	  and g = color_comp y' z'
+	  and b = color_comp x' w'
 	  in
 	    put s (x-1,y-1) (r,g,b)
 	done
@@ -87,8 +88,8 @@ let debug x = prerr_string (x);flush stderr ;;
 
 Sdl.init [ `EVERYTHING ]
 
-let screen_width  = 300
-let screen_height = 200 
+let screen_width  = 800
+let screen_height = 600 
 let screen_depth  = 32 
 
 let vidsurf  =  set_video_mode screen_width screen_height [ `ANYFORMAT ]
@@ -119,11 +120,3 @@ let _ =
     and ev_list = Sdlevent.wait_event () in
       ev_process ev_list 
   done
-(*
-  for i = 0 to screen_width do
-    for j = 0 to screen_height do
-      print_string (string_of_float (N.D2.gen 1 (i,j)));
-      print_newline ()
-    done
-  done
-  *)
