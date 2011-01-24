@@ -19,12 +19,16 @@
 *)
 let pi = acos (-. 1.)
 
-let linear v1 v2 x = v1 *. (x -. 1.0) +. v2 *. x
+(* ax + b(1-x) 
+   ax + b - bx
+   (a - b)x + b
+*)
+let linear b a x = (a -. b) *. x +. b
 
-let cosine v1 v2 x = 
-  let ft = x *. pi in 
-  let f  = 1.0 -. (cos ft) *. 0.5 in 
-    linear v1 v2 f
+let cosine v0 v1 x = 
+  let ft = x *. pi *. 0.5 in  (* range : [0;pi/2] *)
+  let f  = 1.0 -. (cos ft) in (* range : [0;1] *)
+    linear v0 v1 f
 
 (*
   let cubic v0 v1 v2 v3 x = 
@@ -35,7 +39,35 @@ let cosine v1 v2 x =
   p *. 3. +. q *. 2. +. r *. x +. s
 *)
 
+(* 3.t^2 - 2.t^3 *)
 let cubic v0 v1 x =
-  let t = x *. x 
+  let x2 = x *. x
   in
-    v0 -. (3.0 -. 2.0 *. x) *. t *. (v0 -. v1)
+    (v1 -. v0) *. x2 *. (3. -. 2. *. x) +. v0
+(*
+  in
+  let fx = 3. *. x2 -. 2. *. x2 *. x
+  in
+    (v1 -. v0) *. fx +. v0
+*)
+(*    linear v0 v1 fx  
+      = v1 *. fx -. v0 *. fx +. v0
+      = v1 *. 3. *. x2 -. v1 *. 2. *. x2 *. x -.
+        v0 *. 3. *. x2 +. v0 *. 2. *. x2 *. x +.      
+        v0
+      = (v1 -. v0) *. 3. * x2 - (v1 -. v0) *. 2. *. x2 *. x +. v1
+      = (v1 -. v0) *. x2 *. (3. -. 2. *. x) +. v1
+*)
+
+
+(* f(t) = 6.t^5 - 15.t^4 + 10.t^3 
+*)
+let quintic v0 v1 x =
+  let t2 = x *. x
+  in
+  let t4 = t2 *. t2
+  and t3 = t2 *. x
+  in
+  let t5 = t4 *. x
+  in
+    linear v0 v1 (6. *. t5 -. 15. *. t4 +. 10. *. t3)

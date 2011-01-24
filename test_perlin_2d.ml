@@ -26,7 +26,7 @@ open Noise;;
 
 module NConfig : (Noise.CONFIG) = 
 struct 
-  let interpolate = Interpolate.cubic
+  let interpolate = Interpolate.quintic
   let persistence = 1.0
   let octaves     = 6
   let psize       = 256
@@ -108,8 +108,8 @@ let debug x = prerr_string (x);flush stderr ;;
 
 Sdl.init [ `EVERYTHING ]
 
-let screen_width  = 800
-let screen_height = 600 
+let screen_width  = 400
+let screen_height = 300 
 let screen_depth  = 32 
 
 let vidsurf  =  set_video_mode screen_width screen_height [ `ANYFORMAT ]

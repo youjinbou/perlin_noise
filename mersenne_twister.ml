@@ -17,7 +17,7 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 *)
-(* ML translation of the following:
+(* Ocaml translation of the following:
    A C-program for MT19937: Integer version (1998/4/6)            
    genrand() generates one pseudorandom unsigned integer (32bit) 
    which is uniformly distributed among 0 to 2^32-1  for each     
@@ -50,9 +50,17 @@
    "Mersenne Twister: A 623-Dimensionally Equidistributed Uniform  
    Pseudo-Random Number Generator",                                
    ACM Transactions on Modeling and Computer Simulation,           
-   Vol. 8, No. 1, January 1998, pp 3--30.                          *)
+   Vol. 8, No. 1, January 1998, pp 3--30.                          
 
-(* Period parameters *)
+   ------------------------------------------------------------
+   This was implemented as an alternative to the Random module 
+   of  Ocaml for a perlin noise library. Of course, the Random 
+   module is perfectly fit (if not better).
+   Hopefully,  this code is faithfull to the original C imple-
+   mentation.
+
+*)
+
 
 (* convenient shortcuts *)
 let ( land_ ) = Int32.logand 
@@ -168,14 +176,25 @@ struct
 	incr_idx s ; lxor_ y (Tempering.shift_l y)
 
 
-  let int32 x = mod_ (rand ()) x
+  (* 32 bits generator *)
+  let int32 (x : int) = 
+    let res = mod_ (rand ()) (Int32.of_int x)
+    in Int32.to_int res
     
-  let int x = 
-    let v1 = to_int (rand ())
-    and v2 = to_int (rand ()) lsl 31
+  (* 64 bits generator *)
+  let int64 (x : int) = 
+    let res = 
+      let v1 = Int64.of_int32 (rand ())
+      and v2 = 
+	let r = Int64.of_int32 (rand ())
+	and mask = Int64.lognot 0xffL
+	in
+	  (* clear up 2 lsbits and shift left 30bits *)
+	  Int64.shift_left (Int64.logand r mask) 30 
+      in 
+	Int64.rem (Int64.logor v1 v2) (Int64.of_int x)
     in
-      (v1 lor v2) mod x
-
+      Int64.to_int res
 end
 
 module DefaultData =
@@ -186,4 +205,10 @@ end
 module Default = Make(DefaultData)
 
 let int32 = Default.int32
-let int   = Default.int
+let int64 = Default.int64
+
+let int (x : int) = 
+  match Sys.word_size with
+      32 -> Default.int32 x
+    | 64 -> Default.int64 x
+    | _  -> failwith "Mersenne Twister : unsupported word size"
