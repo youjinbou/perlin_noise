@@ -25,6 +25,7 @@ dispatch begin function
 
     let lablgl  = "+lablGL"
     and sdl     = "+sdl"
+    and gmaths  = "+gmaths"
     and glmlite = "+glMLite"
     in
 
@@ -42,6 +43,7 @@ dispatch begin function
     List.iter (fun (dir,nl) -> List.iter (fun name -> ocaml_lib ~extern:true ~dir name) nl) [
       (lablgl, [
 	 "lablgl";
+(*
 	 "lablglut";
 	 "gl";
 	 "glArray";
@@ -63,6 +65,7 @@ dispatch begin function
 	 "gluTess";
 	 "raw";
 	 "togl"
+*)
        ]
       );
 
@@ -81,6 +84,7 @@ dispatch begin function
 
       (sdl, [
 	 "sdl";
+(*
 	 "sdlcdrom";
 	 (* "sdlevent"; *)
 	 "sdlgl";
@@ -93,8 +97,13 @@ dispatch begin function
 	 "sdlttf";
 	 "sdlvideo"; 
 	 "sdlwm"
+*)
        ]
-      ); 
+      );
+      ( gmaths, [
+	"gmaths";
+	]
+      );
     ];
   | _ -> ()
 end;;

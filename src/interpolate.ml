@@ -60,8 +60,7 @@ let cubic v0 v1 x =
 *)
 
 
-(* f(t) = 6.t^5 - 15.t^4 + 10.t^3 
-*)
+(* f(t) = 6.t^5 - 15.t^4 + 10.t^3 *)
 let quintic v0 v1 x =
   let t2 = x *. x
   in
@@ -71,3 +70,6 @@ let quintic v0 v1 x =
   let t5 = t4 *. x
   in
     linear v0 v1 (6. *. t5 -. 15. *. t4 +. 10. *. t3)
+
+
+

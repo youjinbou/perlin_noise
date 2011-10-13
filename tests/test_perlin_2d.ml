@@ -17,22 +17,22 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 *)
-open Sdl;;
-open Sdlvideo;;
-open Sdlevent;;
-open Sdlloader;;
-open Sdlkey;;
-open Noise;;
+open Sdl
+open Sdlvideo
+open Sdlevent
+open Sdlloader
+open Sdlkey
+open Noise
 
 module NConfig : (Noise.CONFIG) = 
 struct 
   let interpolate = Interpolate.quintic
-  let persistence = 1.0
-  let octaves     = 6
   let psize       = 256
 end 
 
-module N = Noise.Make(NConfig)
+module N1 = Noise.Make(NConfig)
+module N2 = Noise.Make(NConfig)
+module N3 = Noise.Make(NConfig)
 
 type point = (int * int)
 
@@ -57,45 +57,35 @@ struct
     let s_info = surface_info s in
       s_info.w, s_info.h
 
-(*
   let fill s = 
-    let k = 50 in
-    let width, height = get_dims s
-    in
-      Sdlvideo.lock s;
-      for y = 1 + k to height + k do
-	for x = 1 + k to width + k do 
-	  let x' = (float)x /. (float)k
-	  and y' = (float)y /. (float)k
-	  in
-	  let r,g,b = 
-	    let v = int_of_float ((N.D2.perlin_noise (x', y')) *. 255.0)
-	    in 
-	      v, v, v
-	  in
-	    put s (x-1-k,y-1-k) (r,g,b)
-	done
-      done;
-      Sdlvideo.unlock s
-*)
-
-  let fill s = 
+    let persistence = 1.0
+    and scale       = 0.01
+    and octaves     = 6 in
+    let perlinr = N1.D2.perlin octaves persistence in
+    let perling = N2.D2.perlin octaves persistence in
+    let perlinb = N3.D2.perlin octaves persistence in
     let width, height = get_dims s
     in
       Sdlvideo.lock s;
       for y = 1 to height do
 	for x = 1 to width do 
-	  let x' = float x
-	  and y' = float y
-	  and z' = float (width - x)
-	  and w' = float (height - y)
+	  (* At round values, the perlin gradients are null, so we'll get a pure 
+	     flat heightfield if we use the integer coords of each point. Instead, 
+	     we concentrate on a small patch of the perlin space.
+	  *)
+	  let x' = float x *. scale
+	  and y' = float y *. scale
+(*
+	  and z' = float (width - x) *. scale
+	  and w' = float (height - y) *. scale
+*)
 	  in
 	    (* color component *)
-	  let color_comp x y = int_of_float (((N.D2.perlin (x,y)) *. 127.0) +. 127.0)
+	  let color_comp f x y = int_of_float (((f (x,y)) *. 127.0) +. 127.0)
 	  in
-	  let r = color_comp x' y'
-	  and g = color_comp y' z'
-	  and b = color_comp x' w'
+	  let r = color_comp perlinr x' y'
+	  and g = color_comp perling x' y'
+	  and b = color_comp perlinb x' y'
 	  in
 	    put s (x-1,y-1) (r,g,b)
 	done
@@ -108,8 +98,8 @@ let debug x = prerr_string (x);flush stderr ;;
 
 Sdl.init [ `EVERYTHING ]
 
-let screen_width  = 400
-let screen_height = 300 
+let screen_width  = 800
+let screen_height = 600 
 let screen_depth  = 32 
 
 let vidsurf  =  set_video_mode screen_width screen_height [ `ANYFORMAT ]

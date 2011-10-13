@@ -61,7 +61,6 @@
 
 *)
 
-
 (* convenient shortcuts *)
 let ( land_ ) = Int32.logand 
 let ( lor_ )  = Int32.logor 
@@ -121,7 +120,7 @@ struct
     for i = 1 to pred Period.n do
       let k = 69069l *! v.mt.(pred i)
       in
-	v.mt.(i) <- land_ k 0xffffffffl
+      v.mt.(i) <- land_ k 0xffffffffl
     done;
     v
       
@@ -141,7 +140,7 @@ struct
     and reset_idx = State.reset_idx
     and incr_idx  = State.incr_idx
     and mag01 = [| 0l ; Period.matrix_a |]
-      (* mag01[x] = x * MATRIX_A  for x=0,1 *)
+    (* mag01[x] = x * MATRIX_A  for x=0,1 *)
     in
     let refill s =
       let newy s v1 v2 = 
@@ -150,30 +149,30 @@ struct
 	(mt s).(idx1) <- lxor_ 
 	  (lxor_ (mt s).(idx2) (lsr_ y 1)) mag01.((to_int y) land 0x1)
       in
-	for kk = 0 to pred (Period.n - Period.m) do 
-	  let y = newy s kk (succ kk)
-	  in
-            storemt s kk (kk + Period.m) y
-	done;
-	for kk = Period.n - Period.m to Period.n - 2 do
-	  let y = newy s kk (succ kk)
-	  in
-	    storemt s kk (kk + Period.m - Period.n) y
-	done;
-	let y = newy s (Period.n - 1) 0
+      for kk = 0 to pred (Period.n - Period.m) do 
+	let y = newy s kk (succ kk)
 	in
-	  storemt s (Period.n - 1) (Period.m - 1) y;
-	  reset_idx s
+        storemt s kk (kk + Period.m) y
+      done;
+      for kk = Period.n - Period.m to Period.n - 2 do
+	let y = newy s kk (succ kk)
+	in
+	storemt s kk (kk + Period.m - Period.n) y
+      done;
+      let y = newy s (Period.n - 1) 0
+      in
+      storemt s (Period.n - 1) (Period.m - 1) y;
+      reset_idx s
 
     in
     let s = D.state in
-      if idx s >= Period.n
-      then refill s;
-      let y = (mt s).(idx s) in
-      let y = (lxor_ y (Tempering.shift_u y)) in
-      let y = (lxor_ y (land_ (Tempering.shift_s y) Tempering.mask_b)) in
-      let y = (lxor_ y (land_ (Tempering.shift_t y) Tempering.mask_c)) in
-	incr_idx s ; lxor_ y (Tempering.shift_l y)
+    if idx s >= Period.n
+    then refill s;
+    let y = (mt s).(idx s) in
+    let y = (lxor_ y (Tempering.shift_u y)) in
+    let y = (lxor_ y (land_ (Tempering.shift_s y) Tempering.mask_b)) in
+    let y = (lxor_ y (land_ (Tempering.shift_t y) Tempering.mask_c)) in
+    incr_idx s ; lxor_ y (Tempering.shift_l y)
 
 
   (* 32 bits generator *)
@@ -189,12 +188,12 @@ struct
 	let r = Int64.of_int32 (rand ())
 	and mask = Int64.lognot 0xffL
 	in
-	  (* clear up 2 lsbits and shift left 30bits *)
-	  Int64.shift_left (Int64.logand r mask) 30 
+	(* clear up 2 lsbits and shift left 30bits *)
+	Int64.shift_left (Int64.logand r mask) 30 
       in 
-	Int64.rem (Int64.logor v1 v2) (Int64.of_int x)
+      Int64.rem (Int64.logor v1 v2) (Int64.of_int x)
     in
-      Int64.to_int res
+    Int64.to_int res
 end
 
 module DefaultData =
