@@ -58,12 +58,12 @@ struct
       s_info.w, s_info.h
 
   let fill s = 
-    let persistence = 1.0
-    and scale       = 0.01
+    let persistence = 0.7
+    and scale       = 0.005
     and octaves     = 6 in
-    let perlinr = N1.D2.perlin octaves persistence in
-    let perling = N2.D2.perlin octaves persistence in
-    let perlinb = N3.D2.perlin octaves persistence in
+    let perlinr = N1.D2.fbm octaves persistence in
+    let perling = N2.D2.fbm octaves persistence in
+    let perlinb = N3.D2.fbm octaves persistence in
     let width, height = get_dims s
     in
       Sdlvideo.lock s;
@@ -75,17 +75,13 @@ struct
 	  *)
 	  let x' = float x *. scale
 	  and y' = float y *. scale
-(*
-	  and z' = float (width - x) *. scale
-	  and w' = float (height - y) *. scale
-*)
 	  in
 	    (* color component *)
 	  let color_comp f x y = int_of_float (((f (x,y)) *. 127.0) +. 127.0)
 	  in
 	  let r = color_comp perlinr x' y'
 	  and g = color_comp perling x' y'
-	  and b = color_comp perlinb x' y'
+	  and b = color_comp perlinb x' y' 
 	  in
 	    put s (x-1,y-1) (r,g,b)
 	done

@@ -1,8 +1,16 @@
+open Noise
 
 type t = {
   scale : float;
   field : float array array;
 }
+
+module PConf = struct
+  let curve        = Curve.quintic
+  let psize        = 256
+  let random_float = Random.float
+  let random_int   = Random.int
+end
 
 let dims h =
   Array.length h.field.(0), Array.length h.field
@@ -31,13 +39,8 @@ let center hf x z x' z' x'' z'' =
   (x +. x' +. x'') /. 3., (y +. y' +. y'') /. 3., (z +. z' +. z'') /. 3.
 
 let dunes width height =
-  let module NConfig : (Noise.CONFIG) = 
-      struct
-	let interpolate = Interpolate.quintic
-	let psize       = 256
-      end 
-  in
-  let module N = Noise.Make(NConfig) in
+  let module NConfig : (Perlin.CONFIG) = PConf in
+  let module N = Perlin.Make(NConfig) in
   let perlin = N.D2.perlin in
   (* At round values, the perlin gradients are null, so we'll get a pure 
      flat heightfield if we use the integer coords of each point. Instead, 
@@ -56,19 +59,10 @@ let dunes width height =
   }
     
 let mountains width height =
-  let module NConfig : (Noise.CONFIG) = 
-      struct
-	let interpolate = Interpolate.quintic
-	let psize       = 256
-      end 
-  in
-  let module N = Noise.Make(NConfig) in
-  let module NConfMask = 
-      struct 
-	let interpolate = Interpolate.quintic 
-	let psize = 256 
-      end in
-  let module NMask = Noise.Make(NConfMask) in
+  let module NConfig : (Perlin.CONFIG) = PConf in
+  let module N = Perlin.Make(NConfig) in
+  let module NConfMask = PConf in
+  let module NMask = Perlin.Make(NConfMask) in
   (* We combine 2 noises functions spanning on the same random space, but using
      different numbers of octave to get a smoother result for the lowest values
      and a more spiky one for the peeks.

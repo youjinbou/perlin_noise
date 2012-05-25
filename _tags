@@ -1,9 +1,11 @@
 <src>: include
 
 # Tag things that are linked with external libraries
-<**/*.{native,byte}>: use_gmaths, use_sdl, use_sdlloader, use_lablgl, use_bigarray, use_unix
+<**/*.{native,byte}>: use_gmaths, use_sdl, use_sdlloader, use_lablgl, use_bigarray, use_unix, inline
 
 # Tag also sources that use these libraries.
 # This will add -I +sdl.
 # You can specify something more precise than **/*.ml
-<**/*.ml>: use_sdl, use_sdlloader, use_lablgl, use_gmaths
+<tests/*.ml>: use_sdl, use_sdlloader, use_lablgl, use_gmaths, inline
+<src/*.ml>: use_gmaths, inline
+<src/*.cmx>: se_gmaths, inline, for-pack(Noise)

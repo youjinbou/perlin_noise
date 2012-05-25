@@ -130,6 +130,7 @@ object(self)
     match grid with
 	Some (rg,ri) -> (
 	  GlArray.enable `vertex;
+	  GlArray.vertex `three rg;
 	  GlArray.draw_elements `lines ~count ri;
 	  GlArray.disable `vertex
 	)
@@ -329,6 +330,7 @@ object(self)
   method render () : unit =
     GlArray.enable `vertex;
     GlArray.enable `normal;
+    self#refresh ();
     for i = 0 to (w - 2) do 
       GlArray.draw_arrays `triangle_strip ~first:(i * h * 2) ~count:(h * 2);
     done;
@@ -343,7 +345,9 @@ end
 
 let hf_array w h =
   let hf = HeightField.mountains w h in
+  (* triangle strip vertices : 2 vertices * width * (height - 1) *)
   let vcount = (h - 1) * 2 * w in
+  (* double : 3 components * strip count *)
   let r = Raw.create_static `double (vcount * 3) in
   Gc.finalise Raw.free_static r;
   for z = 0 to h - 2 do
@@ -353,6 +357,7 @@ let hf_array w h =
       Raw.sets_float r ((z * w + x) * 6) [| vx; vy; vz ; vx'; vy'; vz' |];
     done;
   done;
+  (* normals : 2 per vertex *)
   let ncount = (pred h) * w * 2 in
   let n = Raw.create_static `double (ncount * 3) in
   Gc.finalise Raw.free_static n;
@@ -366,7 +371,7 @@ let hf_array w h =
   new hf_array_render hf r n
 
 (* ------------------------ *)
-(*
+
 class hf_element_render hf r n e = 
   let w,h = HeightField.dims hf in
 object(self)
@@ -406,9 +411,10 @@ object(self)
 
     GlArray.enable `vertex;
     GlArray.enable `normal;
-(*    Array.iter (fun e -> *)
-      GlArray.draw_elements `triangle_strip ~count:3 e.(0);
-(*    ) e; *)
+    self#refresh ();
+    Array.iter (fun a -> 
+      GlArray.draw_elements `triangle_strip ~count a
+    ) e;
     GlArray.disable `vertex;
     GlArray.disable `normal
 
@@ -418,50 +424,47 @@ object(self)
    
 end
 
-let hf_elements () =
-  let w = 400
-  and h = 400 in
+let hf_elements w h =
   let hf = HeightField.mountains w h in
   let count = (pred w) * 2 in
+  (* vertices : 3 components * width * height *)
   let r = Raw.create_static `double (h * w * 3) in
   Gc.finalise Raw.free_static r;
   for z = 0 to h - 1 do
     for x = 0 to w - 1 do
       try 
-      let vx,vy,vz = HeightField.get hf x z in
-      Raw.sets_float r ((z * w + x) * 3) [| vx; vy; vz |];
+	let vx,vy,vz = HeightField.get hf x z in
+	Raw.sets_float r ((z * w + x) * 3) [| vx; vy; vz |];
       with _ -> (Printf.fprintf stderr "vertices : %d %d" x z; exit 1)
     done;
   done;
-  let ccount = (pred h) * w * 6 in
+  (* normals : 3 components *)
+  let ccount = (pred h) * w * 3 in
   let n = Raw.create_static `double ccount in
   Gc.finalise Raw.free_static n;
   for z = 0 to h - 2 do
     for x = 0 to w - 2 do
       try
-      let xn ,yn ,zn  = HeightField.normal hf x z (succ x) (succ z) (succ x) z
-      and xn',yn',zn' = HeightField.normal hf x z x (succ z) (succ x) (succ z) in
-      Raw.sets_float n ((z * w + x + 1) * 6) [| xn; yn; zn; xn'; yn'; zn' |]
+	let xn ,yn ,zn  = HeightField.normal hf x z (succ x) (succ z) (succ x) z in
+	Raw.sets_float n ((z * w + x + 1) * 3) [| xn; yn; zn |]
       with _ -> (Printf.fprintf stderr "normals : %d %d" x z; exit 1)
     done;
   done;
-  let index x y = ((y * w) + x) (* * 3 *) in
+  let index x y = ((y * w) + x) in
   let e = Array.init (h - 2) (fun z -> 
     let e = Raw.create_static `uint count in
-    Gc.finalise Raw.free_static e;
-    for x = 1 to (w - 1) / 2 do
+    Gc.finalise (fun x -> print_endline "freeing static raw..."; Raw.free_static x) e;
+    for x = 0 to w - 2 do
       try 
-      let x = x * 2 in
-      let x1  = index (    x) (     z)
-      and x2  = index (    x) (succ z) in
-      Raw.sets e (x * 2) [| x1; x2 |]
+	let x1  = index (    x) (     z)
+	and x2  = index (    x) (succ z) in
+	Raw.sets e (x * 2) [| x2; x1 |]
       with _ -> (Printf.fprintf stderr "elements : %d %d" x z; exit 1)
     done;
     e
   ) in 
   new hf_element_render hf r n e
-*)
-
+    
 (* ------------------------ *)
 
 (*
@@ -565,7 +568,6 @@ object(self)
   val grid = new grid
 
   method private draw_grid () =
-(*
     List.iter Gl.enable [
       `blend; 
       `alpha_test; 
@@ -588,9 +590,8 @@ object(self)
       `blend; 
       `alpha_test; 
     ]
-*) ()
 
-  val hf = hf_array 300 300
+  val hf = hf_elements 300 300
 
   val mutable normal_rendering = false
 
@@ -940,7 +941,7 @@ object(self)
   method private init () =
     GlDraw.cull_face `back;
     GlDraw.front_face `cw;
-    GlTex.env (`mode `decal);
+    GlTex.env `texture_env (`mode `decal);
     List.iter Gl.enable [
       `cull_face;
       `lighting;
