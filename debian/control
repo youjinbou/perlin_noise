@@ -1,0 +1,28 @@
+Source: noise
+Priority: extra
+Maintainer: dc <dc@localhost>
+Build-Depends: debhelper (>= 7)
+Standards-Version: 3.7.3
+
+Package: libnoise-ocaml
+Section: libs
+Architecture: any
+Provides: ${ocaml:Provides}
+Depends: ${ocaml:Depends}
+Tag: devel::lang:ocaml, devel::library, implemented-in::ocaml, role::shared-lib
+Description: A library for perlin noise generation
+ This library provides implementations of the perlin noise generator, and
+ brownian fractional motion generator.
+ This package contains the runtime libraries.
+
+Package: libnoise-ocaml-dev
+Section: libdevel
+Architecture: all
+Provides: ${ocaml:Provides}
+Depends: ${ocaml:Depends}
+#Depends: libnoise-ocaml
+Tag: devel::lang:ocaml, devel::library, implemented-in::ocaml, role::devel-lib
+Description: A library for perlin noise generation
+ This library provides implementations of the perlin noise generator, and
+ brownian fractional motion generator.
+ This package contains the development files.

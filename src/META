@@ -1,0 +1,5 @@
+version = "current"
+description = "perlin noise library"
+archive(byte) = "noise.cma"
+archive(native) = "noise.cmxa"
+directory = "+noise"
